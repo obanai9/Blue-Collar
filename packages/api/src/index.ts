@@ -5,6 +5,7 @@ import passport from './config/passport.js'
 import authRoutes from './routes/auth.js'
 import categoryRoutes from './routes/categories.js'
 import workerRoutes from './routes/workers.js'
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -21,6 +22,12 @@ app.use('/api/workers', workerRoutes)
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'bluecollar-api' })
 })
+
+// Handle 404 errors for unmatched routes
+app.use(notFoundHandler)
+
+// Global error handler - must be last
+app.use(errorHandler)
 
 app.listen(PORT, () => {
   console.log(`BlueCollar API running on port ${PORT}`)

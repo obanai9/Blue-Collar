@@ -4,6 +4,8 @@ import argon2 from 'argon2'
 import jwt from 'jsonwebtoken'
 import crypto from 'node:crypto'
 import { sendVerificationEmail, sendPasswordResetEmail } from '../mailer/index.js'
+import { AppError } from '../utils/AppError.js'
+import { catchAsync } from '../utils/catchAsync.js'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,22 +25,20 @@ function generateVerificationToken(userId: string): { raw: string; hash: string;
 // Controllers
 // ---------------------------------------------------------------------------
 
-export async function login(req: Request, res: Response) {
+export const login = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body
 
   const user = await db.user.findUnique({ where: { email } })
   if (!user || !(await argon2.verify(user.password, password))) {
-    return res.status(401).json({ status: 'error', message: 'Invalid credentials', code: 401 })
+    throw new AppError('Invalid credentials', 401)
   }
 
   // Block login for unverified accounts
   if (!user.verified) {
-    return res.status(403).json({
-      status: 'error',
-      message:
-        'Your email address has not been verified. Please check your inbox and click the verification link.',
-      code: 403,
-    })
+    throw new AppError(
+      'Your email address has not been verified. Please check your inbox and click the verification link.',
+      403
+    )
   }
 
   const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET!, {
@@ -46,15 +46,15 @@ export async function login(req: Request, res: Response) {
   })
   const { password: _, verificationToken: __, verificationTokenExpiry: ___, ...data } = user
   return res.status(202).json({ data, status: 'success', message: 'Login successful', code: 202, token })
-}
+})
 
-export async function register(req: Request, res: Response) {
+export const register = catchAsync(async (req: Request, res: Response) => {
   const { email, password, firstName, lastName } = req.body
 
   // Check for existing account before hashing
   const existing = await db.user.findUnique({ where: { email } })
   if (existing) {
-    return res.status(409).json({ status: 'error', message: 'Email already in use', code: 409 })
+    throw new AppError('Email already in use', 409)
   }
 
   const hashed = await argon2.hash(password)
@@ -79,13 +79,13 @@ export async function register(req: Request, res: Response) {
     message: 'Registration successful. Please check your email to verify your account.',
     code: 201,
   })
-}
+})
 
-export async function verifyAccount(req: Request, res: Response) {
+export const verifyAccount = catchAsync(async (req: Request, res: Response) => {
   const token = (req.query.token ?? req.body.token) as string | undefined
 
   if (!token) {
-    return res.status(400).json({ status: 'error', message: 'Verification token is required', code: 400 })
+    throw new AppError('Verification token is required', 400)
   }
 
   // Decode without verifying first so we can extract the user id
@@ -93,16 +93,16 @@ export async function verifyAccount(req: Request, res: Response) {
   try {
     payload = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; purpose: string }
   } catch {
-    return res.status(400).json({ status: 'error', message: 'Token is invalid or has expired', code: 400 })
+    throw new AppError('Token is invalid or has expired', 400)
   }
 
   if (payload.purpose !== 'email-verify' || !payload.id) {
-    return res.status(400).json({ status: 'error', message: 'Invalid verification token', code: 400 })
+    throw new AppError('Invalid verification token', 400)
   }
 
   const user = await db.user.findUnique({ where: { id: payload.id } })
   if (!user) {
-    return res.status(404).json({ status: 'error', message: 'User not found', code: 404 })
+    throw new AppError('User not found', 404)
   }
 
   if (user.verified) {
@@ -116,7 +116,7 @@ export async function verifyAccount(req: Request, res: Response) {
     user.verificationTokenExpiry && user.verificationTokenExpiry > new Date()
 
   if (!tokenMatches || !notExpired) {
-    return res.status(400).json({ status: 'error', message: 'Token is invalid or has expired', code: 400 })
+    throw new AppError('Token is invalid or has expired', 400)
   }
 
   await db.user.update({
@@ -125,7 +125,7 @@ export async function verifyAccount(req: Request, res: Response) {
   })
 
   return res.status(200).json({ status: 'success', message: 'Email verified successfully', code: 200 })
-}
+})
 
 export async function googleAuthCallback(req: Request, res: Response) {
   const user = req.user as any
@@ -146,7 +146,7 @@ export async function logout(_req: Request, res: Response) {
   return res.status(200).json({ status: 'success', message: 'Logged out', code: 200 })
 }
 
-export async function forgotPassword(req: Request, res: Response) {
+export const forgotPassword = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body
 
   const user = await db.user.findUnique({ where: { email } })
@@ -172,13 +172,13 @@ export async function forgotPassword(req: Request, res: Response) {
     message: 'If an account exists with that email, a password reset link has been sent.',
     code: 200,
   })
-}
+})
 
-export async function resetPassword(req: Request, res: Response) {
+export const resetPassword = catchAsync(async (req: Request, res: Response) => {
   const { token, password } = req.body
 
   if (!token || !password) {
-    return res.status(400).json({ status: 'error', message: 'Token and password are required', code: 400 })
+    throw new AppError('Token and password are required', 400)
   }
 
   const hash = crypto.createHash('sha256').update(token).digest('hex')
@@ -190,7 +190,7 @@ export async function resetPassword(req: Request, res: Response) {
   })
 
   if (!user) {
-    return res.status(400).json({ status: 'error', message: 'Token is invalid or has expired', code: 400 })
+    throw new AppError('Token is invalid or has expired', 400)
   }
 
   const hashedPassword = await argon2.hash(password)
@@ -205,4 +205,4 @@ export async function resetPassword(req: Request, res: Response) {
   })
 
   return res.status(200).json({ status: 'success', message: 'Password reset successful', code: 200 })
-}
+})

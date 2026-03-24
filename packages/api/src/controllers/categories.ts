@@ -1,13 +1,15 @@
 import type { Request, Response } from 'express'
 import { db } from '../db.js'
+import { AppError } from '../utils/AppError.js'
+import { catchAsync } from '../utils/catchAsync.js'
 
-export async function listCategories(_req: Request, res: Response) {
+export const listCategories = catchAsync(async (_req: Request, res: Response) => {
   const categories = await db.category.findMany()
   return res.json({ data: categories, status: 'success', code: 200 })
-}
+})
 
-export async function getCategory(req: Request, res: Response) {
+export const getCategory = catchAsync(async (req: Request, res: Response) => {
   const category = await db.category.findUnique({ where: { id: req.params.id } })
-  if (!category) return res.status(404).json({ status: 'error', message: 'Not found', code: 404 })
+  if (!category) throw new AppError('Category not found', 404)
   return res.json({ data: category, status: 'success', code: 200 })
-}
+})
