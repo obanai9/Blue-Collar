@@ -10,6 +10,7 @@ import {
 } from '../controllers/auth.js'
 import { authenticate } from '../middleware/auth.js'
 import { validate } from '../middleware/validate.js'
+import { authRateLimiter } from '../config/rateLimiter.js'
 import passport from '../config/passport.js'
 import {
   registerRules,
@@ -27,10 +28,10 @@ router.get(
   passport.authenticate('google', { failureRedirect: '/login?error=unauthorized', session: false }),
   googleAuthCallback
 )
-router.post('/login', validate(loginRules), login)
+router.post('/login', authRateLimiter, validate(loginRules), login)
 router.post('/register', validate(registerRules), register)
 router.delete('/logout', authenticate, logout)
-router.post('/forgot-password', validate(forgotPasswordRules), forgotPassword)
+router.post('/forgot-password', authRateLimiter, validate(forgotPasswordRules), forgotPassword)
 router.put('/reset-password', validate(resetPasswordRules), resetPassword)
 router.put('/verify-account', validate(verifyAccountRules), verifyAccount)
 
