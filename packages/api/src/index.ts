@@ -1,7 +1,9 @@
 // Entry point for BlueCollar API
 import express from 'express'
 import cors from 'cors'
+import pinoHttp from 'pino-http'
 import passport from './config/passport.js'
+import { logger } from './config/logger.js'
 import authRoutes from './routes/auth.js'
 import categoryRoutes from './routes/categories.js'
 import workerRoutes from './routes/workers.js'
@@ -12,6 +14,7 @@ const PORT = process.env.PORT || 3000
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(pinoHttp({ logger }))
 app.use(passport.initialize())
 
 app.use('/api/auth', authRoutes)
@@ -23,7 +26,7 @@ app.get('/health', (_req, res) => {
 })
 
 app.listen(PORT, () => {
-  console.log(`BlueCollar API running on port ${PORT}`)
+  logger.info(`BlueCollar API running on port ${PORT}`)
 })
 
 export default app

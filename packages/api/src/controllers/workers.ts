@@ -1,50 +1,59 @@
 import type { Request, Response } from 'express'
-import { db } from '../db.js'
+import * as workerService from '../services/worker.service.js'
+import { handleError } from '../utils/handleError.js'
+import type { CreateWorkerBody, UpdateWorkerBody, WorkerQuery } from '../interfaces/index.js'
 
-export async function listWorkers(req: Request, res: Response) {
-  const { category, location, page = '1', limit = '20' } = req.query
-  const workers = await db.worker.findMany({
-    where: {
-      isActive: true,
-      ...(category ? { categoryId: String(category) } : {}),
-    },
-    skip: (Number(page) - 1) * Number(limit),
-    take: Number(limit),
-    include: { category: true },
-  })
-  return res.json({ data: workers, status: 'success', code: 200 })
+export async function listWorkers(req: Request<{}, {}, {}, WorkerQuery>, res: Response) {
+  try {
+    const { category, page = '1', limit = '20' } = req.query
+    const workers = await workerService.listWorkers({ category, page: Number(page), limit: Number(limit) })
+    return res.json({ data: workers, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
 
 export async function showWorker(req: Request, res: Response) {
-  const worker = await db.worker.findUnique({
-    where: { id: req.params.id },
-    include: { category: true },
-  })
-  if (!worker) return res.status(404).json({ status: 'error', message: 'Not found', code: 404 })
-  return res.json({ data: worker, status: 'success', code: 200 })
+  try {
+    const worker = await workerService.getWorker(req.params.id)
+    return res.json({ data: worker, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
 
-export async function createWorker(req: Request, res: Response) {
-  const worker = await db.worker.create({ data: { ...req.body, curatorId: req.user!.id } })
-  return res.status(201).json({ data: worker, status: 'success', code: 201 })
+export async function createWorker(req: Request<{}, {}, CreateWorkerBody>, res: Response) {
+  try {
+    const worker = await workerService.createWorker(req.body, req.user!.id)
+    return res.status(201).json({ data: worker, status: 'success', code: 201 })
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
 
-export async function updateWorker(req: Request, res: Response) {
-  const worker = await db.worker.update({ where: { id: req.params.id }, data: req.body })
-  return res.json({ data: worker, status: 'success', code: 200 })
+export async function updateWorker(req: Request<{ id: string }, {}, UpdateWorkerBody>, res: Response) {
+  try {
+    const worker = await workerService.updateWorker(req.params.id, req.body)
+    return res.json({ data: worker, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
 
 export async function deleteWorker(req: Request, res: Response) {
-  await db.worker.delete({ where: { id: req.params.id } })
-  return res.status(204).send()
+  try {
+    await workerService.deleteWorker(req.params.id)
+    return res.status(204).send()
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
 
 export async function toggleActivation(req: Request, res: Response) {
-  const worker = await db.worker.findUnique({ where: { id: req.params.id } })
-  if (!worker) return res.status(404).json({ status: 'error', message: 'Not found', code: 404 })
-  const updated = await db.worker.update({
-    where: { id: req.params.id },
-    data: { isActive: !worker.isActive },
-  })
-  return res.json({ data: updated, status: 'success', code: 200 })
+  try {
+    const updated = await workerService.toggleWorker(req.params.id)
+    return res.json({ data: updated, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
 }
