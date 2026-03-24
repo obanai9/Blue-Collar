@@ -1,18 +1,20 @@
 import type { Request, Response } from 'express'
 import { db } from '../db.js'
+import { paginate } from '../utils/paginate.js'
 
 export async function listWorkers(req: Request, res: Response) {
-  const { category, location, page = '1', limit = '20' } = req.query
-  const workers = await db.worker.findMany({
+  const { category, page = '1', limit = '20' } = req.query
+  const { data, meta } = await paginate({
+    model: 'worker',
     where: {
       isActive: true,
       ...(category ? { categoryId: String(category) } : {}),
     },
-    skip: (Number(page) - 1) * Number(limit),
-    take: Number(limit),
     include: { category: true },
+    page: Number(page),
+    limit: Number(limit),
   })
-  return res.json({ data: workers, status: 'success', code: 200 })
+  return res.json({ data, meta, status: 'success', code: 200 })
 }
 
 export async function showWorker(req: Request, res: Response) {

@@ -5,6 +5,7 @@ import passport from './config/passport.js'
 import authRoutes from './routes/auth.js'
 import categoryRoutes from './routes/categories.js'
 import workerRoutes from './routes/workers.js'
+import adminRoutes from './routes/admin.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -17,6 +18,7 @@ app.use(passport.initialize())
 app.use('/api/auth', authRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/workers', workerRoutes)
+app.use('/api/admin', adminRoutes)
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'bluecollar-api' })
