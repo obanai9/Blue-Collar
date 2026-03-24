@@ -11,8 +11,8 @@ export type PaginationMeta = {
 
 type PaginateArgs = {
   model: 'worker' | 'user'
-  where?: Record<string, unknown>
-  include?: Record<string, unknown>
+  where?: object
+  include?: object
   page: number
   limit: number
 }
