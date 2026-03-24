@@ -21,8 +21,10 @@ model User {
   avatar        String?
   bio           String?
   phone         String?
-  verified      Boolean   @default(false)
-  locationId    String?
+  verified                Boolean   @default(false)
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
+  locationId              String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   workers       Worker[]
