@@ -5,6 +5,7 @@ import crypto from 'node:crypto'
 import { sendVerificationEmail, sendPasswordResetEmail } from '../mailer/index.js'
 import { AppError } from './AppError.js'
 import { sanitizeUser } from '../models/user.model.js'
+import { logger } from '../config/logger.js'
 import type { LoginBody, RegisterBody } from '../interfaces/index.js'
 
 function generateVerificationToken(userId: string) {
@@ -59,6 +60,14 @@ export async function registerUser(
   })
 
   sendVerificationEmail(email, firstName, raw).catch((err) =>
+    logger.error({ err }, 'Failed to send verification email'),
+  )
+
+  return sanitizeUser(user)
+}
+
+/** Returns true if newly verified, false if already verified. */
+export async function verifyAccount(token: string): Promise<boolean> {
     console.error('[mailer] Failed to send verification email:', err),
   )
 
@@ -114,6 +123,7 @@ export async function requestPasswordReset(email: string) {
   await db.user.update({ where: { id: user.id }, data: { resetToken: hash, resetTokenExpiry: expiry } })
 
   sendPasswordResetEmail(user.email, user.firstName, rawToken).catch((err) =>
+    logger.error({ err }, 'Failed to send password reset email'),
     console.error('[mailer] Failed to send password reset email:', err),
   )
 }

@@ -148,6 +148,30 @@ export async function createWorker(req: Request, res: Response) {
 }
 
 export async function updateWorker(req: Request<{ id: string }, {}, UpdateWorkerBody>, res: Response) {
+  try {
+    const worker = await workerService.updateWorker(req.params.id, req.body)
+    return res.json({ data: worker, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
+}
+
+export async function deleteWorker(req: Request, res: Response) {
+  try {
+    await workerService.deleteWorker(req.params.id)
+    return res.status(204).send()
+  } catch (err) {
+    return handleError(res, err)
+  }
+}
+
+export async function toggleActivation(req: Request, res: Response) {
+  try {
+    const updated = await workerService.toggleWorker(req.params.id)
+    return res.json({ data: updated, status: 'success', code: 200 })
+  } catch (err) {
+    return handleError(res, err)
+  }
   const worker = await workerService.updateWorker(req.params.id, req.body)
   return res.json({ data: worker, status: 'success', code: 200 })
 }
