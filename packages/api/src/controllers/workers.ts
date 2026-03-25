@@ -39,21 +39,39 @@ export async function createWorker(req: Request, res: Response) {
   return res.status(201).json({ data: worker, status: 'success', code: 201 })
 }
 
+/** Returns the worker or sends a 404. Also enforces curator ownership unless the caller is an admin. */
+async function resolveWorker(req: Request, res: Response) {
+  const worker = await db.worker.findUnique({ where: { id: req.params.id } })
+  if (!worker) {
+    res.status(404).json({ status: 'error', message: 'Not found', code: 404 })
+    return null
+  }
+  if (req.user!.role !== 'admin' && worker.curatorId !== req.user!.id) {
+    res.status(403).json({ status: 'error', message: 'Forbidden', code: 403 })
+    return null
+  }
+  return worker
+}
+
 export async function updateWorker(req: Request, res: Response) {
-  const worker = await db.worker.update({ where: { id: req.params.id }, data: req.body })
-  return res.json({ data: worker, status: 'success', code: 200 })
+  const worker = await resolveWorker(req, res)
+  if (!worker) return
+  const updated = await db.worker.update({ where: { id: worker.id }, data: req.body })
+  return res.json({ data: updated, status: 'success', code: 200 })
 }
 
 export async function deleteWorker(req: Request, res: Response) {
-  await db.worker.delete({ where: { id: req.params.id } })
+  const worker = await resolveWorker(req, res)
+  if (!worker) return
+  await db.worker.delete({ where: { id: worker.id } })
   return res.status(204).send()
 }
 
 export async function toggleActivation(req: Request, res: Response) {
-  const worker = await db.worker.findUnique({ where: { id: req.params.id } })
-  if (!worker) return res.status(404).json({ status: 'error', message: 'Not found', code: 404 })
+  const worker = await resolveWorker(req, res)
+  if (!worker) return
   const updated = await db.worker.update({
-    where: { id: req.params.id },
+    where: { id: worker.id },
     data: { isActive: !worker.isActive },
   })
   return res.json({ data: updated, status: 'success', code: 200 })
