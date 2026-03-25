@@ -15,6 +15,10 @@ export async function listWorkers(req: Request<{}, {}, {}, WorkerQuery>, res: Re
   const { category, page = '1', limit = '20' } = req.query
   const workers = await workerService.listWorkers({
     category,
+export async function listWorkers(req: Request, res: Response) {
+  const { category, page = '1', limit = '20' } = req.query
+  const workers = await workerService.listWorkers({
+    category: category as string | undefined,
     page: Number(page),
     limit: Number(limit),
 import { db } from '../db.js'
@@ -66,6 +70,7 @@ export async function showWorker(req: Request, res: Response) {
 }
 
 export async function createWorker(req: Request<{}, {}, CreateWorkerBody>, res: Response) {
+export async function createWorker(req: Request, res: Response) {
   const worker = await workerService.createWorker(req.body, req.user!.id)
   return res.status(201).json({ data: worker, status: 'success', code: 201 })
 }
@@ -92,6 +97,12 @@ async function resolveWorker(req: Request, res: Response) {
 }
 
 export async function updateWorker(req: Request, res: Response) {
+  const worker = await workerService.updateWorker(req.params.id, req.body)
+  return res.json({ data: worker, status: 'success', code: 200 })
+}
+
+export async function deleteWorker(req: Request, res: Response) {
+  await workerService.deleteWorker(req.params.id)
   const worker = await resolveWorker(req, res)
   if (!worker) return
   const updated = await db.worker.update({ where: { id: worker.id }, data: req.body })

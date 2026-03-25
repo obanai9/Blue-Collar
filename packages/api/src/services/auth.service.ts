@@ -17,6 +17,7 @@ function generateVerificationToken(userId: string) {
 }
 
 export async function loginUser({ email, password }: LoginBody) {
+export async function loginUser(email: string, password: string) {
   const user = await db.user.findUnique({ where: { email } })
   if (!user || !(await argon2.verify(user.password, password))) {
     throw new AppError('Invalid credentials', 401)
@@ -32,6 +33,16 @@ export async function loginUser({ email, password }: LoginBody) {
 }
 
 export async function registerUser({ email, password, firstName, lastName }: RegisterBody) {
+  const { password: _, verificationToken: __, verificationTokenExpiry: ___, ...data } = user
+  return { data, token }
+}
+
+export async function registerUser(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string,
+) {
   const existing = await db.user.findUnique({ where: { email } })
   if (existing) throw new AppError('Email already in use', 409)
 
@@ -49,6 +60,8 @@ export async function registerUser({ email, password, firstName, lastName }: Reg
   )
 
   return sanitizeUser(user)
+  const { password: _, verificationToken: __, verificationTokenExpiry: ___, ...data } = user
+  return data
 }
 
 export async function verifyAccount(token: string) {
