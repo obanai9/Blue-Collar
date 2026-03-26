@@ -3,13 +3,14 @@ import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import * as authService from '../services/auth.service.js'
 import { handleError } from '../utils/handleError.js'
+import { UserResource } from '../resources/index.js'
 import type { LoginBody, RegisterBody, ForgotPasswordBody, ResetPasswordBody } from '../interfaces/index.js'
 
 export async function login(req: Request<{}, {}, LoginBody>, res: Response) {
   try {
     const { data, token } = await authService.loginUser(req.body)
     return res.status(202).json({
-      data,
+      data: UserResource(data as any),
       status: 'success',
       message: 'Login successful',
       code: 202,
@@ -24,7 +25,7 @@ export async function register(req: Request<{}, {}, RegisterBody>, res: Response
   try {
     const data = await authService.registerUser(req.body)
     return res.status(201).json({
-      data,
+      data: UserResource(data as any),
       status: 'success',
       message: 'Registration successful. Please check your email to verify your account.',
       code: 201,
