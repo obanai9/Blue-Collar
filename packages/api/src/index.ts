@@ -1,6 +1,7 @@
 // Entry point for BlueCollar API
 import express from 'express'
 import cors from 'cors'
+import { corsConfig } from './config/cors.js'
 import { env } from './config/env.js'
 import pinoHttp from 'pino-http'
 import methodOverride from 'method-override'
@@ -14,7 +15,7 @@ import adminRoutes from './routes/admin.js'
 const app = express()
 const PORT = env.PORT || 3000
 
-app.use(cors())
+app.use(cors(corsConfig))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(pinoHttp({ logger }))
