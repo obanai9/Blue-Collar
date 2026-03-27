@@ -3,7 +3,7 @@
 
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, token, Address, Env, Symbol};
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -11,12 +11,15 @@ use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Sym
 
 #[contracttype]
 #[derive(Clone)]
-pub struct Tip {
+pub struct Escrow {
     pub from: Address,
     pub to: Address,
     pub amount: i128,
     pub token: Address,
+    /// Unix timestamp (seconds) after which the payer may cancel
+    pub expiry: u64,
     pub released: bool,
+    pub cancelled: bool,
 }
 
 #[contracttype]
