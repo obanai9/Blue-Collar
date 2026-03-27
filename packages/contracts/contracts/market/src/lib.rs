@@ -3,7 +3,15 @@
 
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, token, Address, Env, Symbol};
+
+// ---------------------------------------------------------------------------
+// Data types
+// ---------------------------------------------------------------------------
+
+// =============================================================================
+// Data types
+// =============================================================================
 
 // ---------------------------------------------------------------------------
 // Data types
@@ -11,12 +19,23 @@ use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Sym
 
 #[contracttype]
 #[derive(Clone)]
-pub struct Tip {
+pub struct Escrow {
     pub from: Address,
     pub to: Address,
     pub amount: i128,
     pub token: Address,
+    /// Unix timestamp (seconds) after which the payer may cancel
+    pub expiry: u64,
     pub released: bool,
+    pub cancelled: bool,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct Config {
+    pub admin: Address,
+    pub fee_bps: u32,
+    pub fee_recipient: Address,
 }
 
 #[contracttype]
@@ -29,6 +48,8 @@ pub struct Config {
 
 #[contracttype]
 pub enum DataKey {
+    /// Instance storage — admin address, set once at initialize
+    Admin,
     Tip(Symbol),
     Admin,
     FeeBps,
@@ -49,6 +70,9 @@ pub enum EscrowStatus {
     Cancelled,
 }
 
+// =============================================================================
+// Contract
+// =============================================================================
 #[contracttype]
 #[derive(Clone)]
 pub struct Escrow {
@@ -341,10 +365,27 @@ mod tests {
     #[test]
     #[should_panic(expected = "Already initialized")]
     fn test_initialize_twice_panics() {
-        let (env, client, admin, fee_recipient) = setup();
-        client.initialize(&admin, &100u32, &fee_recipient);
+        let t = TestEnv::new();
+        // second call must panic
+        t.client().initialize(&t.admin);
+    }
+
+    #[test]
+    #[should_panic(expected = "Already initialized")]
+    fn test_initialize_with_different_admin_panics() {
+        let t = TestEnv::new();
+        let attacker = Address::generate(&t.env);
+        t.client().initialize(&attacker);
+    }
+
+    #[test]
+    fn test_admin_cannot_be_overwritten() {
+        let t = TestEnv::new();
+        let attacker = Address::generate(&t.env);
+        // Attacker is a different address — original admin is still set
+        assert_ne!(t.client().get_admin(), attacker);
+        assert_eq!(t.client().get_admin(), t.admin);
     }
 }
-
 #[cfg(test)]
 mod test;
